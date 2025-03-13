@@ -1,0 +1,280 @@
+import React, { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Artist } from "@/entities/Artist";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ExternalLink, ChevronLeft, MapPin, Star, Music, Phone, Mail, MessageSquare, Clipboard, Check, Building2 } from "lucide-react";
+
+export default function ArtistProfilePage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [artist, setArtist] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    loadArtist();
+  }, [id]);
+
+  const loadArtist = async () => {
+    try {
+      const data = await Artist.list();
+      const foundArtist = data.find(a => a.id === id);
+      if (foundArtist) {
+        setArtist(foundArtist);
+      }
+    } catch (error) {
+      console.error("Error loading artist:", error);
+    }
+    setIsLoading(false);
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const tierLabels = {
+    "A": "Award Winning / 1B+ Streams",
+    "B": "Established / 1M+ Streams",
+    "C": "Emerging Artist"
+  };
+
+  const tierColors = {
+    A: "bg-blue-100 text-blue-800",
+    B: "bg-green-100 text-green-800",
+    C: "bg-yellow-100 text-yellow-800"
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="h-64 bg-gray-200 rounded mb-6"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!artist) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-gray-900">Artist not found</h2>
+          <Button 
+            onClick={() => navigate("/Explore")}
+            className="mt-4"
+          >
+            Back to Explore
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const getContactDisplay = () => {
+    if (artist.contact) {
+      // Check if it's an email
+      if (artist.contact.includes('@')) {
+        return (
+          <div className="flex items-center gap-2 text-blue-800 font-medium mb-2">
+            <Mail className="w-5 h-5 text-blue-600" />
+            <span>Email</span>
+          </div>
+        );
+      } 
+      // Check if it's a phone number
+      else if (/^\d/.test(artist.contact)) {
+        return (
+          <div className="flex items-center gap-2 text-blue-800 font-medium mb-2">
+            <Phone className="w-5 h-5 text-blue-600" />
+            <span>Phone</span>
+          </div>
+        );
+      }
+      // Assume it's a management/roster contact
+      else {
+        return (
+          <div className="flex items-center gap-2 text-blue-800 font-medium mb-2">
+            <Building2 className="w-5 h-5 text-blue-600" />
+            <span>Management/Roster</span>
+          </div>
+        );
+      }
+    }
+    return null;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-4xl mx-auto">
+        <Button
+          variant="ghost"
+          onClick={() => navigate(-1)}
+          className="mb-6"
+        >
+          <ChevronLeft className="w-4 h-4 mr-2" />
+          Back
+        </Button>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="md:col-span-1">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-xl font-bold">{artist.name}</CardTitle>
+                {artist.location && (
+                  <div className="flex items-center gap-2 text-gray-500 mt-1">
+                    <MapPin className="w-4 h-4" />
+                    <span>{artist.location}</span>
+                  </div>
+                )}
+                {artist.origin && artist.origin !== artist.location && (
+                  <div className="text-sm text-gray-500">Originally from {artist.origin}</div>
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <Badge className={tierColors[artist.tier]}>
+                    <Star className="w-3 h-3 mr-1" />
+                    {tierLabels[artist.tier]}
+                  </Badge>
+                  
+                  {artist.nvak_artist && (
+                    <Badge className="bg-purple-100 text-purple-800">Nvak Artist</Badge>
+                  )}
+                  
+                  {(artist.primary_genre || (artist.genres && artist.genres.length > 0)) && (
+                    <div>
+                      <h4 className="font-medium mb-2">Genres</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {artist.primary_genre && (
+                          <Badge variant="outline" className="bg-gray-50">
+                            {artist.primary_genre}
+                          </Badge>
+                        )}
+                        {artist.genres?.map((genre, i) => (
+                          <Badge key={i} variant="outline" className="bg-gray-50">
+                            {genre}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {artist.tags && artist.tags.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2">Skills</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {artist.tags?.map((tag, i) => (
+                          <Badge key={i} variant="secondary">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {artist.management && (
+                    <div>
+                      <h4 className="font-medium mb-2">Management</h4>
+                      <p className="text-sm">{artist.management}</p>
+                    </div>
+                  )}
+                  
+                  {artist.portfolio_links && artist.portfolio_links.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2">Portfolio</h4>
+                      {artist.portfolio_links.map((link, i) => (
+                        <a
+                          key={i}
+                          href={link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm mb-2"
+                        >
+                          <Music className="w-4 h-4" />
+                          <span>Listen to work</span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Contact Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {artist.contact ? (
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <div className="flex justify-between items-start">
+                      {getContactDisplay()}
+                      <Button 
+                        size="sm" 
+                        variant="ghost" 
+                        onClick={() => copyToClipboard(artist.contact)}
+                        className="text-blue-600"
+                      >
+                        {copied ? <Check className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                        {copied ? 'Copied!' : 'Copy'}
+                      </Button>
+                    </div>
+                    <p className="text-gray-800 font-mono break-all">{artist.contact}</p>
+                  </div>
+                ) : (
+                  <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-100 text-yellow-800">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageSquare className="w-5 h-5" />
+                      <span className="font-medium">No direct contact information</span>
+                    </div>
+                    <p>Contact information for this artist is not available. They may be reached through management or representation.</p>
+                  </div>
+                )}
+
+                <Separator />
+
+                {(artist.bio || artist.notable_works || artist.additional_notes) && (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium">About {artist.name}</h3>
+                    
+                    {artist.bio && (
+                      <div>
+                        <h4 className="font-medium mb-1 text-gray-700">Bio</h4>
+                        <p className="text-gray-600">{artist.bio}</p>
+                      </div>
+                    )}
+                    
+                    {artist.notable_works && (
+                      <div>
+                        <h4 className="font-medium mb-1 text-gray-700">Notable Works</h4>
+                        <p className="text-gray-600">{artist.notable_works}</p>
+                      </div>
+                    )}
+                    
+                    {artist.additional_notes && (
+                      <div>
+                        <h4 className="font-medium mb-1 text-gray-700">Additional Notes</h4>
+                        <p className="text-gray-600">{artist.additional_notes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
